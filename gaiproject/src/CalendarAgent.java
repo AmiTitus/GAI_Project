@@ -2,12 +2,11 @@
  * 
  */
 package gaiproject;
-
+import jade.core.Agent;
 /**
  * @author Maxime Dhaisne
  * @author Quentin Lanusse
  *
  */
-class Slot {
-
+public class CalendarAgent extends Agent{
 }
