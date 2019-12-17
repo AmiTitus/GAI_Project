@@ -7,8 +7,8 @@
   </target>
 
   <target name="compile" depends="init" description="compile the source " >
-    <javac srcdir="${src}" destdir="${build}">
-      <classpath location="lib/jade.jar" />
+    <javac includeantruntime="false" srcdir="${src}" destdir="${build}">
+      <classpath location="jade/lib/jade.jar" />
     </javac>
   </target>
 
@@ -18,7 +18,7 @@
   </target>
 
   <target name="run" description="create agents" >
-    <java fork="true" classpath="lib/jade.jar;build" classname="jade.Boot">
+    <java fork="true" classpath="jade/lib/jade.jar;build" classname="jade.Boot">
       <arg value="-gui" />
       <arg value="" />
     </java>
