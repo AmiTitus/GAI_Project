@@ -11,11 +11,16 @@ import java.util.logging.Logger;
  */
 class Slot {
 	protected int startTime;
-	protected int duration;
+	protected int duration; //useless attribute ?
 	protected Double wanted=0.0;
-	protected boolean lock = false;
+	protected boolean lock = false; //meeting
 
 	private Logger logger = Logger.getLogger(Slot.class.getName());
+
+	public Slot(int startTime){
+		this.startTime = startTime;
+		this.duration = 1;
+	}
 
 	public Slot(int startTime,  int duration){
 		this.startTime = startTime;
