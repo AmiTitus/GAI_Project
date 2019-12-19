@@ -11,7 +11,7 @@ import java.util.logging.Logger;
  */
 class Slot {
 	protected int startTime;
-	protected int duration; //useless attribute ?
+	protected int duration=1;
 	protected Double wanted=0.0;
 	protected boolean lock = false; //meeting
 
@@ -19,7 +19,11 @@ class Slot {
 
 	public Slot(int startTime){
 		this.startTime = startTime;
-		this.duration = 1;
+	}
+
+	public Slot(int startTime, boolean lock){
+		this.startTime = startTime;
+		this.lock = lock;
 	}
 
 	public Slot(int startTime,  int duration){

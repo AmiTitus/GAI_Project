@@ -16,16 +16,24 @@ class Calendar {
 	private int numberDays = 5;
 	private int numberSlotPerDay = 24;
 
-	public Calendar(){
+	public Calendar(boolean rand){
 		this.calendarTable = new Slot[this.numberDays][this.numberSlotPerDay];
-		initCalendarTable();
+		if(rand){
+			randomlyInitCalendarTable();
+		}else{
+			initCalendarTable();	
+		}
 	}
 
-	public Calendar(int numberDays, int numberSlotPerDay){
+	public Calendar(int numberDays, int numberSlotPerDay, boolean rand){
 		this.numberDays = numberDays;
 		this.numberSlotPerDay = numberSlotPerDay;
-		this.calendarTable = new Slot[numberDays][numberSlotPerDay];
-		initCalendarTable();
+		this.calendarTable = new Slot[numberDays][numberSlotPerDay];	
+		if(rand){
+			randomlyInitCalendarTable();
+		}else{
+			initCalendarTable();	
+		}
 	}
 
 
@@ -36,6 +44,23 @@ class Calendar {
 		for(int day=0; day<this.numberDays;day++){
 			for(int time=0; time<this.numberSlotPerDay; time++){
 				this.calendarTable[day][time] = new Slot(time);
+			}
+		}
+	}
+
+	private void randomlyInitCalendarTable(){
+		Double treshold = 0.25;
+		double x;
+		Slot s;
+		for (int day=0; day<this.numberDays; day++){
+			for (int time=0; time<this.numberSlotPerDay; time++){
+				x = Math.random();
+				if (x < treshold){
+					s = new Slot(time, true);
+				}else{
+					s = new Slot(time, false);
+				}
+				this.calendarTable[day][time] = s;
 			}
 		}
 	}
@@ -95,5 +120,20 @@ class Calendar {
 		return this.calendarTable[day][startTime];
 	}
 
+
+	public void prettyPrint(){
+		String lines = "";
+		String line = "----";
+		String column = "|";
+		boolean l;
+		for (int day=0; day<this.numberDays; day++){
+			lines += "\n"+column;
+			for (int time=0; time<this.numberSlotPerDay; time++){
+				l = this.calendarTable[day][time].lock;	
+				lines += l+column;
+			}
+		}
+		System.out.println(lines);
+	}
 
 }
