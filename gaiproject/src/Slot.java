@@ -62,6 +62,15 @@ class Slot {
 		lock = false;
 	}
 
+	public void setWanted(Double wanted){	
+		assert wanted >= 0 && wanted <= 1 : " Incorrect value for wanted";
+		this.wanted = wanted;
+	}
+
+	public Double getWanted(){
+		return wanted;
+	}
+
 	public String toString(){
 		return "SlotTime["
 			+ "startTime" + startTime
