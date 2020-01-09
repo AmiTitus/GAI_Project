@@ -25,3 +25,5 @@ hs_err_pid*
 
 # ant
 gaiproject/build.xml
+gaiproject/APDescription.txt
+gaiproject/MTPs-Main-Container.txt
