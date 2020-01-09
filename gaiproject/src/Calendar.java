@@ -129,8 +129,9 @@ class Calendar {
 		for (int day=0; day<this.numberDays; day++){
 			lines += "\n"+column;
 			for (int time=0; time<this.numberSlotPerDay; time++){
-				l = this.calendarTable[day][time].lock;	
-				lines += l+column;
+				l = this.calendarTable[day][time].lock;
+				lines += (l) ? " T " : " F ";
+				lines += column;
 			}
 		}
 		System.out.println(lines);
