@@ -130,7 +130,7 @@ class Calendar {
 			lines += "\n"+column;
 			for (int time=0; time<this.numberSlotPerDay; time++){
 				l = this.calendarTable[day][time].lock;
-				lines += (l) ? " T " : " F ";
+				lines += (l) ? " O " : " X ";
 				lines += column;
 			}
 		}
