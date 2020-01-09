@@ -1,8 +1,8 @@
-Agent have:
+## Agent have:
 - private calendar with already planned meeting
 - contact list (subset of all agents)
 
-Agent can:
+## Agent can:
 - ask to participants for a new meeting
 - Change his preference for a slot
 - lock his Slot
@@ -10,18 +10,18 @@ Agent can:
 - not reply when he is ask for a slot
 - refuse to participate to a meeting after being invited
 
-Agent cannot:
+## Agent cannot:
 - Canceled or reschedule a Slot
 - Be eliminated
 - remove other participants from a meeting without their consentment
 
-Must be:
+## Must be:
 - allow meeting should be scheduled
 - Maximize the global preference (NB: SIMPLEX)
 	Note: maybe use a simplex to show the theoratical results and compare with what we got from negociations phase ?
 
 
-Phases:
+## Phases:
 (Dont forget that slot preferences and availability can change during the process)
 - Init calendar for each agents
 INVITATION
@@ -36,3 +36,14 @@ CONFIRMATION
 - repeat NEGOCIATION if one participant slot is no longer avaible or preferences changed
 - warn every invited people that one participant cannot participate anymore (UNLOCK SLOT)
 END
+
+## Agent type
+?
+
+## Behaviour:
+- Cyclic with steps like in Lab
+- FSMBehaviour ?
+
+## Naming Scheme
+## Content language, basic concepts, templates for message exchange
+?
