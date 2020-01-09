@@ -1,22 +1,22 @@
 ## Agent have:
-- private calendar with already planned meeting
+- private calendar with already planned meetings
 - contact list (subset of all agents)
 
 ## Agent can:
-- ask to participants for a new meeting
+- ask participants for a new meeting
 - Change his preference for a slot
 - lock his Slot
-- ask to participant with a slot is free
-- not reply when he is ask for a slot
+- ask to participant if a slot is free
+- not reply when asked for a slot
 - refuse to participate to a meeting after being invited
 
 ## Agent cannot:
-- Canceled or reschedule a Slot
-- Be eliminated
-- remove other participants from a meeting without their consentment
+- Cancel or reschedule a Slot once locked
+- Be eliminated from a meeting
+- remove other participants from a meeting without their consent
 
 ## Must be:
-- allow meeting should be scheduled
+- all the meetings should be scheduled
 - Maximize the global preference (NB: SIMPLEX)
 	Note: maybe use a simplex to show the theoratical results and compare with what we got from negociations phase ?
 
@@ -33,8 +33,8 @@ NEGOCIATION
 CONFIRMATION
 (get confirmation from every agents)
 - lock it if possible
-- repeat NEGOCIATION if one participant slot is no longer avaible or preferences changed
 - warn every invited people that one participant cannot participate anymore (UNLOCK SLOT)
+- repeat NEGOCIATION if one participant slot is no longer avaible or preferences changed
 END
 
 ## Agent type
