@@ -97,6 +97,7 @@ class Calendar {
 
 	/**
  	* Locking a Slot
+	* @Deprecated Now please use manageSlot() instead
  	* @param day 	Day of the slot
  	* @param startTime	Time of the slot
  	* @param duration	Duration of the slot
@@ -107,6 +108,28 @@ class Calendar {
 			this.calendarTable[day][time].lock();
 		}
 	}
+
+	/**
+	 * Manage state of slots in calendar
+	 * @param day 	Day of slot
+	 * @param startTime	Time of the slot
+	 * @param duration	Duration of meeting
+	 * @param state		in which state the slot will be
+	 * */
+	public void manageSlot(int day, int startTime, int duration, Slot.State state){
+		assert startTime > 0 && startTime < this.numberSlotPerDay : "Incorrect value startTime";
+		assert duration > 0 : "Incorrect value duration";
+		assert day < this.numberDays : "Incorrect value day";
+		for(int time=startTime; time<startTime+duration; time++){
+			this.calendarTable[day][time].propose();
+			switch(state){
+				case FREE: this.calendarTable[day][time].unlock();break;
+				case LOCK: this.calendarTable[day][time].lock();break;
+				case PROPOSED: this.calendarTable[day][time].propose();break;
+			}
+		}
+	}
+
 
 	/**
  	* Return a Slot
@@ -120,6 +143,10 @@ class Calendar {
 		return this.calendarTable[day][startTime];
 	}
 
+
+	public Slot[][] getCalendarTable(){
+		return this.calendarTable;
+	}
 
 	public void prettyPrint(){
 		String lines = "";

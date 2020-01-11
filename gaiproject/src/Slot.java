@@ -10,6 +10,12 @@ import java.util.logging.Logger;
  *
  */
 class Slot {
+	protected enum State {
+		FREE,
+		PROPOSED,
+		LOCK
+	}
+	protected State currentState=State.FREE;
 	protected int startTime;
 	protected int duration=1;
 	protected Double wanted=0.0;
@@ -24,6 +30,8 @@ class Slot {
 	public Slot(int startTime, boolean lock){
 		this.startTime = startTime;
 		this.lock = lock;
+		if(lock)
+			this.currentState=State.LOCK;
 	}
 
 	public Slot(int startTime,  int duration){
@@ -35,6 +43,8 @@ class Slot {
 		this.startTime = startTime;
 		this.duration = duration;
 		this.lock = lock;
+		if(lock)
+			this.currentState=State.LOCK;
 	}
 
 	public Slot(int startTime,  int duration, Double wanted){
@@ -51,6 +61,8 @@ class Slot {
 		this.duration = duration;
 		this.wanted = wanted;
 		this.lock = lock;
+		if(lock)
+			this.currentState=State.LOCK;
 	}
 
 	
@@ -58,12 +70,18 @@ class Slot {
 		if(lock)
 			logger.log(Level.WARNING, "The slot was already lock");
 		lock = true;
+		this.currentState = State.LOCK;
 	}
 
 	public void unlock(){
 		if(!lock)
 			logger.log(Level.WARNING, "The slot was already unlock");
 		lock = false;
+		this.currentState = State.FREE;
+	}
+
+	public void propose(){
+		this.currentState = State.PROPOSED;
 	}
 
 	public void setWanted(Double wanted){	
