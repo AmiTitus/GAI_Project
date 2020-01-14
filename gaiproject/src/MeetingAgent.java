@@ -97,8 +97,11 @@ public class MeetingAgent extends Agent{
 		addBehaviour(new SendInvitation(day, starttime, duration));
 	}
 
+	/**
+	 * State where agent is waiting for an invitation
+	 * */
 	private class WaitInvitation extends OneShotBehaviour{
-		private long timeOut = 2*60*1000;
+		
 		@Override
 		public void action(){
 			logger.log(Level.INFO, agentName + " is waiting for invitation.");
@@ -110,6 +113,9 @@ public class MeetingAgent extends Agent{
 		}
 	}
 
+	/**
+	 * State where agent is waiting for ALL responses to its invitation
+	 * */
 	private class WaitResponse extends OneShotBehaviour{
 		@Override
 		public void action(){
@@ -123,7 +129,7 @@ public class MeetingAgent extends Agent{
 
 	/**
 	 * This behaviour is used to send invitations
-	 * We can also send message using jade platform, looks better to do it manually
+	 * THis behaviour is invoked using GUI
 	 * */
 	private class SendInvitation extends OneShotBehaviour{
 		/**
@@ -242,11 +248,11 @@ public class MeetingAgent extends Agent{
 		}
 	}
 
+
 	private class FindConsensus extends OneShotBehaviour{
 		
 		private AID[] contactrefuse;
 		private AID[] contactaccept;
-		private int repliesCnt=0;
 		private long timeout = 1*60*1000;
 		private boolean consensus=false; //when this value is true, negociations are done and the meeting was locked, the behaviour end
 
@@ -257,8 +263,7 @@ public class MeetingAgent extends Agent{
 			ACLMessage msg = receive(mt);
 			// Collect all responses of the invitation
 			if(msg!=null){
-				repliesCnt++;
-		
+				// Do something	
 			}
 		}
 	}

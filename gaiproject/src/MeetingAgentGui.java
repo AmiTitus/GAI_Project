@@ -17,13 +17,21 @@ class MeetingAgentGui extends JFrame {
 	private JTextField dayField, durationField, timeField;
 	private JPanel p, calendarPanel;
 
+
+	/* *
+	 *	Calendar Class
+	 *	Create a graphical Calendar as a JComponent
+	 * */
 	private class CalendarGrid extends JComponent{
 		private static final long serialVersionUID = 2L;
 		CalendarGrid() {
             		setPreferredSize(new Dimension(myCalendar.calendarTable[0].length*RECT_SIZE,
 						       myCalendar.calendarTable.length*RECT_SIZE));
         	}
-
+		
+		/* *
+		 *	Draw JComponents
+		 * */
 		protected void paintComponent(Graphics g){
 			super.paintComponent(g);
 			g.setColor(Color.WHITE);
@@ -109,10 +117,16 @@ class MeetingAgentGui extends JFrame {
 		setResizable(false);
 	}
 
+	/* *
+	 * Methods to refresh the calendar
+	 * */
 	public void updateCalendar(){
 		calendarPanel.repaint();
 	}
 
+	/* *
+	 *	Display GUI
+	 * */
 	public void display() {
 		pack();
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -120,5 +134,12 @@ class MeetingAgentGui extends JFrame {
 		int centerY = (int)screenSize.getHeight() / 2;
 		setLocation(centerX - getWidth() / 2, centerY - getHeight() / 2);
 		setVisible(true);
-	}	
+	}
+
+	/* *
+	 *	Close GUI
+	 * */
+	public void close(){
+		setVisible(false);
+	}
 }
