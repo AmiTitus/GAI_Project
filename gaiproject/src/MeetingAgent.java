@@ -15,6 +15,7 @@ import java.util.logging.Level;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.logging.Logger;
+import java.util.Random;
 import jade.lang.acl.UnreadableException;
 import java.io.IOException;
 import gaiproject.Calendar;
@@ -55,7 +56,7 @@ public class MeetingAgent extends Agent{
 		gui = new MeetingAgentGui(this);
 		agentName = getAID().getLocalName();
 
-		// SERVICE AND SET THE CONTACT LIST
+		// Init services
 		DFAgentDescription dfd = new DFAgentDescription();
 		dfd.setName(getAID());
 		ServiceDescription sd = new ServiceDescription();
@@ -100,6 +101,51 @@ public class MeetingAgent extends Agent{
 	 **/
 	public Calendar getCalendar(){
 		return myCalendar;
+	}
+
+	/**
+	 * Initialize the contact list by taking a subset of all available agents
+	 **/
+	protected void intializeContactList(){
+		// Stop initialization if contact list already exists
+		if (contacts != null){
+			return;
+		}
+
+		// Init contact list
+		DFAgentDescription template = new DFAgentDescription();
+		ServiceDescription sd = new ServiceDescription();
+		sd.setType("");
+		template.addServices(sd);
+		try {
+			DFAgentDescription[] result = DFService.search(this, template);
+			//System.out.println(getAID().getLocalName() + ": the following agent have been added to contact list");
+			// Create a sublist of contacts 
+			Random rand = new Random();
+			int nbContacts = rand.nextInt(result.length-1)+1; // Random int between 1 and nbAgents -1
+			contacts = new AID[nbContacts];
+			System.out.println(getAID().getLocalName() + ": Adding " + nbContacts + " agents to the contact list out of " + result.length);
+			for (int i = 0; i < nbContacts; i++){
+				boolean added = false;
+				while (!added){
+					int id = rand.nextInt(result.length);
+					for (int j = 0; j <= i; j++){
+						if (contacts[j] == result[id].getName() || getAID().equals(result[id].getName())){
+							added = false;
+							break;
+						} else {
+							added = true;
+						}
+					}
+					if (added){
+						System.out.println(getAID().getLocalName() + ": " + result[id].getName() + " has been added to the contact list");
+						contacts[i] = result[id].getName();
+					}
+				}
+			}
+		} catch (FIPAException fe) {
+			fe.printStackTrace();
+		}
 	}
 
 	/**
@@ -189,6 +235,9 @@ public class MeetingAgent extends Agent{
 
 		@Override
 		public void action(){
+			// Initialize the contact list if needed
+			intializeContactList();
+
 			ACLMessage msg = new ACLMessage(ACLMessage.PROPOSE);
 			slots = new Slot[duration];
 			for(int i=0;i<duration;i++){
