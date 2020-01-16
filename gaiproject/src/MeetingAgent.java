@@ -12,6 +12,8 @@ import jade.domain.FIPAException;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAAgentManagement.ServiceDescription;
 import java.util.logging.Level;
+import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 import jade.lang.acl.UnreadableException;
 import java.io.IOException;
@@ -24,19 +26,27 @@ import gaiproject.MeetingAgentGui;
  * @author Quentin Lanusse
  *
  * Language:
- * ConversationId:
- * - meeting-ivit: the according message is an invitation PROPOSAL
- * - meeting-invit PROPROSAL_REJECT
- * - meeting-invit: PROPOSAL_ACCEPT
+ * ConversationId: invit-00 : invit + id of the invitation
+ * - PROPOSE: send meeting slots
+ * - REJECT_PROPOSAL: Agent can send a set of slot wich fit better for him
+ * - ACCEPT_PROPOSAL:
  *
  */
 public class MeetingAgent extends Agent{
+	
 	private Calendar myCalendar;
 	private AID[] contacts;
 	private Logger logger = Logger.getLogger(MeetingAgent.class.getName());
 	private String agentName;
 	private MeetingAgentGui gui;
 	private FSMBehaviour fsm;
+
+	private int invitId=0;
+	// Message currently processed
+	private ACLMessage currentMsg;
+	// Map of all messages for each invitation
+	private HashMap<String, ArrayList<ACLMessage>> invitTable = new HashMap<String, ArrayList<ACLMessage>>();
+
 	protected void setup(){
 		// Init calendar randomly to have already planned meeting
 		myCalendar = new Calendar(true);
@@ -62,30 +72,31 @@ public class MeetingAgent extends Agent{
 		// Final State Machine
 		fsm = new FSMBehaviour(this);
 		// States
-		fsm.registerFirstState(new WaitInvitation(), "WaitInvitation");
+		fsm.registerFirstState(new Wait(), "Wait");
 		fsm.registerState(new SendInvitation(), "SendInvitation");
-		fsm.registerState(new WaitResponse(), "WaitResponse");
 		fsm.registerState(new ReceiveInvitation(), "ReceiveInvitation");
-		fsm.registerState(new FindConsensus(), "FindConsensus");
+		fsm.registerState(new ReceiveInvitation(), "ReceiveResponse");
 		// Transition
 		// Convention
 		// Transition 0 : Loop on behaviour itself
-		// From WaitInvitation
-		fsm.registerTransition("WaitInvitation", "WaitInvitation", 0);
+		// From Wait
+		fsm.registerTransition("Wait", "Wait", 0);
+		fsm.registerTransition("Wait", "ReceiveInvitation", 1);
+		fsm.registerTransition("Wait", "ReceiveResponse", 2);
 		// fsm.registerTransition("WaitInvitation", "SendInvitation", 1);
-		fsm.registerTransition("WaitInvitation", "ReceiveInvitation", 2);
 		// From SendInvitation
-		fsm.registerTransition("SendInvitation", "WaitResponse", 1);
-		fsm.registerTransition("SendInvitation", "WaitInvitation", -1);
-		// From WaitResponse
-		fsm.registerTransition("WaitResponse", "FindConsensus", 1);
+		fsm.registerTransition("SendInvitation", "Wait", 1);
 		// From ReceiveInvitation
-		fsm.registerTransition("ReceiveInvitation", "WaitInvitation", 1);
+		fsm.registerTransition("ReceiveInvitation", "Wait", 1);
 	}
+
 	protected void takeDown(){
 		logger.log(Level.INFO, "Meeting agent " + agentName + " terminated.");
 	}
 
+	/**
+	 * @return Calendar
+	 **/
 	public Calendar getCalendar(){
 		return myCalendar;
 	}
@@ -97,33 +108,38 @@ public class MeetingAgent extends Agent{
 		addBehaviour(new SendInvitation(day, starttime, duration));
 	}
 
-	private class WaitInvitation extends OneShotBehaviour{
-		private long timeOut = 2*60*1000;
+	/**
+	 * State where agent is waiting for ALL responses to its invitation
+	 * */
+	public class Wait extends OneShotBehaviour{
+		private int nextState=0;
+
 		@Override
 		public void action(){
-			logger.log(Level.INFO, agentName + " is waiting for invitation.");
+			logger.log(Level.INFO, agentName + " is waiting for message.");
+			// block until receiving a message
 			block();
+			// Receiving message
+			MessageTemplate mt = MessageTemplate.MatchReceiver(contacts);
+			currentMsg = myAgent.receive(mt);
+			
+			if(currentMsg!=null){	
+				if(currentMsg.getPerformative()==ACLMessage.PROPOSE){
+					nextState=1;	// Message is an invitation
+				}else if(currentMsg.getPerformative()==ACLMessage.ACCEPT_PROPOSAL || 
+					currentMsg.getPerformative()==ACLMessage.REJECT_PROPOSAL)
+				{nextState=2;}
+			}
 		}
-		
 		public int onEnd(){
-			return 2;	
+			return nextState;
 		}
 	}
 
-	private class WaitResponse extends OneShotBehaviour{
-		@Override
-		public void action(){
-			logger.log(Level.INFO, agentName + " is waiting for response.");
-			block();
-		}
-		public int onEnd(){
-			return 1;
-		}
-	}
 
 	/**
 	 * This behaviour is used to send invitations
-	 * We can also send message using jade platform, looks better to do it manually
+	 * THis behaviour is invoked using GUI
 	 * */
 	private class SendInvitation extends OneShotBehaviour{
 		/**
@@ -174,16 +190,19 @@ public class MeetingAgent extends Agent{
 				retint = -1;
 				logger.log(Level.SEVERE, agentName + " No contacts");
 			}else{
+				invitId++;
 				for(AID aid: contacts)
 					msg.addReceiver(aid);
-					msg.setConversationId("meeting-invit");
+					msg.setConversationId("invit-"+invitId);
 				try{
 					msg.setContentObject(slots);
 				}catch(IOException e){
 					logger.log(Level.SEVERE, agentName + " Error sending message " + msg);
 				}
+				// Create a new Entry in invitMap for this new Invitation
+				invitTable.put(msg.getConversationId(), new ArrayList<ACLMessage>());	
 				myAgent.send(msg);
-				logger.log(Level.INFO, agentName + " sent an invitation to his contacts.");
+				logger.log(Level.INFO, agentName + " sent invitation "+msg.getConversationId()+" to his contacts.");
 			}
 			retint = 1;
 		}
@@ -195,7 +214,7 @@ public class MeetingAgent extends Agent{
 	}
 
 	/**
-	 * This behaviour is waiting for an invitation, then look if the slots are free, confirm or refuse the proposition
+	 * This Behaviour computes an invitation
 	 **/
 	private class ReceiveInvitation extends OneShotBehaviour{
 		
@@ -203,7 +222,7 @@ public class MeetingAgent extends Agent{
 
 		@Override
 		public void onStart(){
-			logger.log(Level.INFO, agentName + " received inventation.");	
+			logger.log(Level.INFO, agentName + " received inventation "+currentMsg.getConversationId());	
 		}
 
 
@@ -218,16 +237,13 @@ public class MeetingAgent extends Agent{
 		@Override
 		public void action(){
 			// Can only respond to a message from contacts and a message is a proposal
-			MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchReceiver(contacts), MessageTemplate.MatchPerformative(ACLMessage.PROPOSE));
-			ACLMessage msg = myAgent.receive(mt);
-			ACLMessage reply = msg.createReply();
-			if(msg!=null){
+			ACLMessage reply = currentMsg.createReply();
+			if(currentMsg!=null){
 				try{
-					slots = (Slot[])msg.getContentObject();
+					slots = (Slot[])currentMsg.getContentObject();
 				}catch(UnreadableException e){
 					logger.log(Level.SEVERE, agentName + " Error receiving message ");
 				}
-				reply.setConversationId("meeting-response");
 				if(freeSlots()){
 					reply.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
 				}else{
@@ -242,25 +258,53 @@ public class MeetingAgent extends Agent{
 		}
 	}
 
-	private class FindConsensus extends OneShotBehaviour{
-		
-		private AID[] contactrefuse;
-		private AID[] contactaccept;
-		private int repliesCnt=0;
-		private long timeout = 1*60*1000;
-		private boolean consensus=false; //when this value is true, negociations are done and the meeting was locked, the behaviour end
 
+	/**
+	 * This behaviour computes a response	 
+	 * */
+	private class ReceiveResponse extends OneShotBehaviour{
+
+		private int nextState = 1;
+
+		@Override
+		public void onStart(){
+			logger.log(Level.INFO, agentName + " received response to " + currentMsg.getConversationId());	
+		}
+
+
+		@Override
 		public void action(){
-			MessageTemplate mt = MessageTemplate.and(MessageTemplate.MatchReceiver(contacts),
-					     	 	         MessageTemplate.or(MessageTemplate.MatchPerformative(ACLMessage.REJECT_PROPOSAL),
-						    	         MessageTemplate.MatchPerformative(ACLMessage.ACCEPT_PROPOSAL)));
-			ACLMessage msg = receive(mt);
-			// Collect all responses of the invitation
-			if(msg!=null){
-				repliesCnt++;
-		
+
+			ArrayList<ACLMessage> rejected = new ArrayList<ACLMessage>();
+			ArrayList<ACLMessage> accepted = new ArrayList<ACLMessage>();
+
+			// Add the response to the invitTable
+			// Check if we got all response for this invitation
+			// if one is missing wait for it
+			// else looks anwers, if there is negative one we should send new invitation with new time
+			ArrayList<ACLMessage> list = (ArrayList<ACLMessage>)invitTable.get(currentMsg.getConversationId());
+			list.add(currentMsg);
+			if(list.size()==contacts.length){
+				for (ACLMessage msg : list) {
+					switch(msg.getPerformative()){
+						case ACLMessage.ACCEPT_PROPOSAL: accepted.add(msg);break;
+						case ACLMessage.REJECT_PROPOSAL: rejected.add(msg);break;
+					}
+				}
+				if(rejected.size()==0){
+					// everyone agreed on the slot, we can send confirmation
+				}else{
+					// some rejected, we have to propose new slot
+				}
+			}else{
+				nextState = 1;
+				return;
 			}
+			
+		}
+
+		public int onEnd(){
+			return nextState;
 		}
 	}
-
 }

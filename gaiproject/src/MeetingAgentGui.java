@@ -17,13 +17,28 @@ class MeetingAgentGui extends JFrame {
 	private JTextField dayField, durationField, timeField;
 	private JPanel p, calendarPanel;
 
+
+	/* *
+	 *	Calendar Class
+	 *	Create a graphical Calendar as a JComponent
+	 * */
 	private class CalendarGrid extends JComponent{
 		private static final long serialVersionUID = 2L;
+		private boolean daltonism = false;
+
 		CalendarGrid() {
-            		setPreferredSize(new Dimension(myCalendar.calendarTable[0].length*RECT_SIZE,
-						       myCalendar.calendarTable.length*RECT_SIZE));
+			int width = myCalendar.calendarTable[0].length*RECT_SIZE;
+			int height =  myCalendar.calendarTable.length*RECT_SIZE;
+            		setPreferredSize(new Dimension(width, height));	
         	}
 
+		protected void setDaltonism(boolean d){
+			this.daltonism = d;
+		}
+		
+		/* *
+		 *	Draw JComponents
+		 * */
 		protected void paintComponent(Graphics g){
 			super.paintComponent(g);
 			g.setColor(Color.WHITE);
@@ -31,11 +46,11 @@ class MeetingAgentGui extends JFrame {
 			for(int day=0; day<myCalendar.calendarTable.length; day++){
 				for(int time=0; time<myCalendar.calendarTable[0].length; time++){
 					if (myCalendar.getSlot(day, time).currentState.equals(Slot.State.FREE)){
-						g.setColor(Color.GREEN);
+						g.setColor(this.daltonism?Color.GREEN:Color.GREEN);
 					}else if(myCalendar.getSlot(day, time).currentState.equals(Slot.State.PROPOSED)){
-						g.setColor(Color.ORANGE);
+						g.setColor(this.daltonism?Color.PINK:Color.ORANGE);
 					}else{
-						g.setColor(Color.RED);
+						g.setColor(this.daltonism?Color.BLUE:Color.RED);
 					}
 					Rectangle r = new Rectangle(time*RECT_SIZE, day*RECT_SIZE, RECT_SIZE, RECT_SIZE);
 					g.fillRect(r.x, r.y, r.width, r.height);
@@ -52,9 +67,13 @@ class MeetingAgentGui extends JFrame {
 		myAgent = a;
 		myCalendar = a.getCalendar();
 
+		Checkbox daltonism = new Checkbox("Quentin"); 
+		
 		// Calendar Panel
 		calendarPanel = new JPanel();
-		calendarPanel.add(new CalendarGrid());
+		CalendarGrid calendarGrid = new CalendarGrid();
+
+		calendarPanel.add(calendarGrid);
 
 
 		p = new JPanel();
@@ -71,11 +90,21 @@ class MeetingAgentGui extends JFrame {
 		p.add(new JLabel("Duration:"));
 		durationField = new JTextField(15);
 		p.add(durationField);
-
+		
+		p.add(daltonism);
+		
 		getContentPane().add(p, BorderLayout.CENTER);
 		getContentPane().add(calendarPanel, BorderLayout.WEST);
 
 		JButton addButton = new JButton("Create Invitation");
+
+		daltonism.addItemListener(new ItemListener(){
+			public void itemStateChanged(ItemEvent e){
+				calendarGrid.setDaltonism(e.getStateChange()==1);
+				calendarGrid.repaint();
+			}
+		});
+
 		addButton.addActionListener( new ActionListener() {
 			public void actionPerformed(ActionEvent ev) {
 				String text;
@@ -118,10 +147,16 @@ class MeetingAgentGui extends JFrame {
 		setResizable(false);
 	}
 
+	/* *
+	 * Methods to refresh the calendar
+	 * */
 	public void updateCalendar(){
 		calendarPanel.repaint();
 	}
 
+	/* *
+	 *	Display GUI
+	 * */
 	public void display() {
 		pack();
 		Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
@@ -129,5 +164,12 @@ class MeetingAgentGui extends JFrame {
 		int centerY = (int)screenSize.getHeight() / 2;
 		setLocation(centerX - getWidth() / 2, centerY - getHeight() / 2);
 		setVisible(true);
-	}	
+	}
+
+	/* *
+	 *	Close GUI
+	 * */
+	public void close(){
+		setVisible(false);
+	}
 }
