@@ -10,13 +10,12 @@ import javax.swing.*;
 
 class MeetingAgentGui extends JFrame {	
 	private static final long serialVersionUID = 1L;
-	private MeetingAgent myAgent;
-	private Calendar myCalendar;
+	private CalendarGrid calendarGrid;
 	private final int RECT_SIZE = 10;
 	private final int RECT_GAP = 5;
 	private JTextField dayField, durationField, timeField;
 	private JPanel p, calendarPanel;
-
+	
 
 	/* *
 	 *	Calendar Class
@@ -25,10 +24,12 @@ class MeetingAgentGui extends JFrame {
 	private class CalendarGrid extends JComponent{
 		private static final long serialVersionUID = 2L;
 		private boolean daltonism = false;
+		private Calendar calendar;
 
-		CalendarGrid() {
-			int width = myCalendar.calendarTable[0].length*RECT_SIZE;
-			int height =  myCalendar.calendarTable.length*RECT_SIZE;
+		CalendarGrid(Calendar calendar) {
+			this.calendar = calendar;
+			int width = calendar.calendarTable[0].length*RECT_SIZE;
+			int height =  calendar.calendarTable.length*RECT_SIZE;
             		setPreferredSize(new Dimension(width, height));	
         	}
 
@@ -42,12 +43,11 @@ class MeetingAgentGui extends JFrame {
 		protected void paintComponent(Graphics g){
 			super.paintComponent(g);
 			g.setColor(Color.WHITE);
-		
-			for(int day=0; day<myCalendar.calendarTable.length; day++){
-				for(int time=0; time<myCalendar.calendarTable[0].length; time++){
-					if (myCalendar.getSlot(day, time).currentState.equals(Slot.State.FREE)){
+			for(int day=0; day<calendar.calendarTable.length; day++){
+				for(int time=0; time<calendar.calendarTable[0].length; time++){
+					if (calendar.getSlot(day, time).currentState.equals(Slot.State.FREE)){
 						g.setColor(this.daltonism?Color.GREEN:Color.GREEN);
-					}else if(myCalendar.getSlot(day, time).currentState.equals(Slot.State.PROPOSED)){
+					}else if(calendar.getSlot(day, time).currentState.equals(Slot.State.PROPOSED)){
 						g.setColor(this.daltonism?Color.PINK:Color.ORANGE);
 					}else{
 						g.setColor(this.daltonism?Color.BLUE:Color.RED);
@@ -64,14 +64,14 @@ class MeetingAgentGui extends JFrame {
 	MeetingAgentGui(MeetingAgent a) {
 		super(a.getLocalName());
 		
-		myAgent = a;
-		myCalendar = a.getCalendar();
+		MeetingAgent myAgent = a;
+		Calendar myCalendar = a.getCalendar();
 
 		Checkbox daltonism = new Checkbox("Quentin"); 
 		
 		// Calendar Panel
 		calendarPanel = new JPanel();
-		CalendarGrid calendarGrid = new CalendarGrid();
+		calendarGrid = new CalendarGrid(myCalendar);
 
 		calendarPanel.add(calendarGrid);
 
@@ -142,7 +142,7 @@ class MeetingAgentGui extends JFrame {
 	 * Methods to refresh the calendar
 	 * */
 	public void updateCalendar(){
-		calendarPanel.repaint();
+		calendarGrid.repaint();
 	}
 
 	/* *

@@ -84,6 +84,21 @@ class Calendar {
 	}
 
 	/**
+	 * Return if the slots are free
+	 * @param day	Day of meeting
+	 * @param time	Time of meetin
+	 * @param duration	Duration of meeting
+	 * @return true if slots are free else false
+	 * */
+	public boolean areSlotsFree(int day, int startTime, int duration){	
+		assert startTime > 0 && startTime < this.numberSlotPerDay : "Incorrect value startTime";
+		assert duration > 0 : "Incorrect value duration";
+		assert day < this.numberDays : "Incorrect value day";
+		for(int t=startTime; t<startTime+duration-1; t++) if (!this.calendarTable[day][t].currentState.equals(Slot.State.FREE)) return false;
+		return true;
+	}
+
+	/**
  	* Insert a Slot
  	* @param s 	Slot to insert
  	* @param day	Day to insert the Slot

@@ -30,7 +30,8 @@ import gaiproject.MeetingAgentGui;
  * - PROPOSE: send meeting slots
  * - REJECT_PROPOSAL: Agent can send a set of slot wich fit better for him
  * - ACCEPT_PROPOSAL:
- *
+ * - CONFIRM: confirm the meeting slot(s) and lock them
+ * - ACCEPT / REJECT
  */
 public class MeetingAgent extends Agent{
 	
@@ -69,7 +70,7 @@ public class MeetingAgent extends Agent{
 
 		logger.log(Level.INFO, "Hello! " + agentName + " is ready to work.");
 		gui.display();
-		// Final State Machine
+		
 		fsm = new FSMBehaviour(this);
 		// States
 		fsm.registerFirstState(new Wait(), "Wait");
@@ -127,10 +128,26 @@ public class MeetingAgent extends Agent{
 				if(currentMsg.getPerformative()==ACLMessage.PROPOSE){
 					nextState=1;	// Message is an invitation
 				}else if(currentMsg.getPerformative()==ACLMessage.ACCEPT_PROPOSAL || 
-					currentMsg.getPerformative()==ACLMessage.REJECT_PROPOSAL)
-				{nextState=2;}
+					currentMsg.getPerformative()==ACLMessage.REJECT_PROPOSAL){
+					nextState=2;
+				}else if(currentMsg.getPerformative()==ACLMessage.CONFIRM){
+					nextState=3;
+				}
 			}
 		}
+		public int onEnd(){
+			return nextState;
+		}
+	}
+
+
+	public class Confirm extends OneShotBehaviour{
+		private int nextState=1;
+
+		@Override
+		public void action(){
+		}
+
 		public int onEnd(){
 			return nextState;
 		}
@@ -181,8 +198,6 @@ public class MeetingAgent extends Agent{
 				slots[i] = new Slot(this.starttime+i, this.duration, 1.0);
 				slots[i].propose();
 			}
-			// Update the Calendar in gui
-			gui.updateCalendar();
 			
 			// If the agent doesnt have contacts, we got an error and don't send message
 			if(contacts == null || contacts.length == 0){
@@ -191,9 +206,9 @@ public class MeetingAgent extends Agent{
 				logger.log(Level.SEVERE, agentName + " No contacts");
 			}else{
 				invitId++;
+				msg.setConversationId("invit-"+invitId);
 				for(AID aid: contacts)
 					msg.addReceiver(aid);
-					msg.setConversationId("invit-"+invitId);
 				try{
 					msg.setContentObject(slots);
 				}catch(IOException e){
@@ -204,7 +219,9 @@ public class MeetingAgent extends Agent{
 				myAgent.send(msg);
 				logger.log(Level.INFO, agentName + " sent invitation "+msg.getConversationId()+" to his contacts.");
 			}
-			retint = 1;
+			retint = 1;	
+			// Update the Calendar in gui
+			gui.updateCalendar();
 		}
 
 		public int onEnd(){
@@ -293,6 +310,10 @@ public class MeetingAgent extends Agent{
 				}
 				if(rejected.size()==0){
 					// everyone agreed on the slot, we can send confirmation
+					ACLMessage msg = new ACLMessage(ACLMessage.CONFIRM);
+					for(AID aid: contacts)
+						msg.addReceiver(aid);
+					myAgent.send(msg);
 				}else{
 					// some rejected, we have to propose new slot
 				}
