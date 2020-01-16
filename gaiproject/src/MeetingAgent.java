@@ -75,20 +75,20 @@ public class MeetingAgent extends Agent{
 		// States
 		fsm.registerFirstState(new Wait(), "Wait");
 		fsm.registerState(new SendInvitation(), "SendInvitation");
-		fsm.registerState(new ReceiveInvitation(), "ReceiveInvitation");
-		fsm.registerState(new ReceiveInvitation(), "ReceiveResponse");
+		fsm.registerState(new ManageInvitation(), "ManageInvitation");
+		fsm.registerState(new ManageResponse(), "ManageResponse");
 		// Transition
 		// Convention
 		// Transition 0 : Loop on behaviour itself
 		// From Wait
 		fsm.registerTransition("Wait", "Wait", 0);
-		fsm.registerTransition("Wait", "ReceiveInvitation", 1);
-		fsm.registerTransition("Wait", "ReceiveResponse", 2);
+		fsm.registerTransition("Wait", "ManageInvitation", 1);
+		fsm.registerTransition("Wait", "ManageResponse", 2);
 		// fsm.registerTransition("WaitInvitation", "SendInvitation", 1);
 		// From SendInvitation
 		fsm.registerTransition("SendInvitation", "Wait", 1);
-		// From ReceiveInvitation
-		fsm.registerTransition("ReceiveInvitation", "Wait", 1);
+		// From ManageInvitation
+		fsm.registerTransition("ManageInvitation", "Wait", 1);
 	}
 
 	protected void takeDown(){
@@ -233,7 +233,7 @@ public class MeetingAgent extends Agent{
 	/**
 	 * This Behaviour computes an invitation
 	 **/
-	private class ReceiveInvitation extends OneShotBehaviour{
+	private class ManageInvitation extends OneShotBehaviour{
 		
 		private Slot[] slots;
 
@@ -279,7 +279,7 @@ public class MeetingAgent extends Agent{
 	/**
 	 * This behaviour computes a response	 
 	 * */
-	private class ReceiveResponse extends OneShotBehaviour{
+	private class ManageResponse extends OneShotBehaviour{
 
 		private int nextState = 1;
 
