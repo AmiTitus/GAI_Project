@@ -13,8 +13,8 @@ import gaiproject.Slot;
 class Calendar {
 
 	protected Slot[][] calendarTable;
-	private int numberDays = 5;
-	private int numberSlotPerDay = 24;
+	protected int numberDays = 5;
+	protected int numberSlotPerDay = 24;
 
 	public Calendar(boolean rand){
 		this.calendarTable = new Slot[this.numberDays][this.numberSlotPerDay];

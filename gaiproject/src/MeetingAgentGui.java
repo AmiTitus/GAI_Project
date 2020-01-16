@@ -86,6 +86,15 @@ class MeetingAgentGui extends JFrame {
 					int time = Integer.parseInt(text);
 					text = durationField.getText().trim();
 					int duration = Integer.parseInt(text);
+
+					if (day >= myCalendar.numberDays ||
+					    time >= myCalendar.numberSlotPerDay ||
+					    duration+time > myCalendar.numberSlotPerDay) {
+						System.out.println("Error: The meeting information are invalid");
+						System.out.println(duration+time);
+						System.out.println(myCalendar.numberSlotPerDay);
+						return;
+					}
 					myAgent.sendInvitation(day, time, duration);
 					dayField.setText("");
 					timeField.setText("");
