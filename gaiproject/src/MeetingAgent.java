@@ -77,6 +77,7 @@ public class MeetingAgent extends Agent{
 		fsm.registerState(new SendInvitation(), "SendInvitation");
 		fsm.registerState(new ReceiveInvitation(), "ReceiveInvitation");
 		fsm.registerState(new ReceiveInvitation(), "ReceiveResponse");
+		fsm.registerState(new Confirm(), "Confirm");
 		// Transition
 		// Convention
 		// Transition 0 : Loop on behaviour itself
@@ -84,11 +85,14 @@ public class MeetingAgent extends Agent{
 		fsm.registerTransition("Wait", "Wait", 0);
 		fsm.registerTransition("Wait", "ReceiveInvitation", 1);
 		fsm.registerTransition("Wait", "ReceiveResponse", 2);
+		fsm.registerTransition("Wait", "Confirm", 3);
 		// fsm.registerTransition("WaitInvitation", "SendInvitation", 1);
 		// From SendInvitation
 		fsm.registerTransition("SendInvitation", "Wait", 1);
 		// From ReceiveInvitation
 		fsm.registerTransition("ReceiveInvitation", "Wait", 1);
+		// From Confirm
+		fsm.registerTransition("Confirm", "Wait", 1);
 	}
 
 	protected void takeDown(){
@@ -113,6 +117,7 @@ public class MeetingAgent extends Agent{
 	 * State where agent is waiting for ALL responses to its invitation
 	 * */
 	public class Wait extends OneShotBehaviour{
+		private static final long serialVersionUID=10L;
 		private int nextState=0;
 
 		@Override
@@ -128,7 +133,9 @@ public class MeetingAgent extends Agent{
 				if(currentMsg.getPerformative()==ACLMessage.PROPOSE){
 					nextState=1;	// Message is an invitation
 				}else if(currentMsg.getPerformative()==ACLMessage.ACCEPT_PROPOSAL || 
-					currentMsg.getPerformative()==ACLMessage.REJECT_PROPOSAL){
+					 currentMsg.getPerformative()==ACLMessage.REJECT_PROPOSAL ||
+					 currentMsg.getPerformative()==ACLMessage.AGREE ||
+					 currentMsg.getPerformative()==ACLMessage.REFUSE){
 					nextState=2;
 				}else if(currentMsg.getPerformative()==ACLMessage.CONFIRM){
 					nextState=3;
@@ -142,10 +149,32 @@ public class MeetingAgent extends Agent{
 
 
 	public class Confirm extends OneShotBehaviour{
+		private static final long serialVersionUID=11L;
 		private int nextState=1;
 
 		@Override
 		public void action(){
+			int day=-1, startTime=-1, duration=-1;
+			HashMap<String, Integer> invit = new HashMap<String, Integer>();
+			ACLMessage reply = currentMsg.createReply();
+			
+			if(currentMsg!=null){
+				try{
+					ArrayList<ACLMessage> list = invitTable.get(currentMsg.getConversationId());
+					ACLMessage msg = list.get(0);
+					invit = (HashMap<String, Integer>)msg.getContentObject();
+				}catch(UnreadableException e){
+					logger.log(Level.SEVERE, agentName + " Error reading slots from invitation "+currentMsg.getConversationId());
+				}
+				day = invit.get("day");
+				startTime = invit.get("startTime");
+				duration = invit.get("duration");
+				if(myCalendar.areSlotsFree(day, startTime, duration)){
+					reply.setPerformative(ACLMessage.AGREE);
+				}else{
+					reply.setPerformative(ACLMessage.REFUSE);
+				}
+			}
 		}
 
 		public int onEnd(){
@@ -159,6 +188,7 @@ public class MeetingAgent extends Agent{
 	 * THis behaviour is invoked using GUI
 	 * */
 	private class SendInvitation extends OneShotBehaviour{
+		private static final long serialVersionUID=12L;
 		/**
 		 * Create Object Content for one Invitation
 		 * We suppose that when we are sending invitation we want it at 1.0
@@ -168,7 +198,7 @@ public class MeetingAgent extends Agent{
 		 * */
 		private Slot[] slots;
 		private int day=-1;
-		private int starttime=-1;
+		private int startTime=-1;
 		private int duration=-1;
 		private int retint=-1;
 
@@ -176,32 +206,30 @@ public class MeetingAgent extends Agent{
 			super();
 		}
 
-		public SendInvitation(int day, int starttime, int duration){
+		public SendInvitation(int day, int startTime, int duration){
 			super();
 			this.day = day;
-			this.starttime = starttime;
+			this.startTime = startTime;
 			this.duration = duration;
 		}
 
 		public void onStart(){
-			logger.log(Level.INFO, agentName + " creates new invitation: day="+day+" time="+starttime+" duration="+duration);
+			logger.log(Level.INFO, agentName + " creates new invitation: day="+day+" time="+startTime+" duration="+duration);
 		}
 
 		@Override
 		public void action(){
 			ACLMessage msg = new ACLMessage(ACLMessage.PROPOSE);
-			slots = new Slot[duration];
-			for(int i=0;i<duration;i++){
-				// Update the slots in agent calendar to PROPOSED state
-				myCalendar.getSlot(day, starttime+i).propose();
-				// Content objects for invitation
-				slots[i] = new Slot(this.starttime+i, this.duration, 1.0);
-				slots[i].propose();
-			}
+			HashMap <String, Integer> invit = new HashMap<String, Integer>();
 			
+			myCalendar.manageSlot(this.day, this.startTime, this.duration, Slot.State.PROPOSED);
+			invit.put("day", this.day);
+			invit.put("duration", this.duration);
+			invit.put("startTime", this.startTime);
+
 			// If the agent doesnt have contacts, we got an error and don't send message
 			if(contacts == null || contacts.length == 0){
-				myCalendar.manageSlot(day, starttime, duration, Slot.State.FREE);
+				myCalendar.manageSlot(day, startTime, duration, Slot.State.FREE);
 				retint = -1;
 				logger.log(Level.SEVERE, agentName + " No contacts");
 			}else{
@@ -210,7 +238,7 @@ public class MeetingAgent extends Agent{
 				for(AID aid: contacts)
 					msg.addReceiver(aid);
 				try{
-					msg.setContentObject(slots);
+					msg.setContentObject(invit);
 				}catch(IOException e){
 					logger.log(Level.SEVERE, agentName + " Error sending message " + msg);
 				}
@@ -234,34 +262,28 @@ public class MeetingAgent extends Agent{
 	 * This Behaviour computes an invitation
 	 **/
 	private class ReceiveInvitation extends OneShotBehaviour{
-		
-		private Slot[] slots;
-
+		private static final long serialVersionUID=13L;
 		@Override
 		public void onStart(){
 			logger.log(Level.INFO, agentName + " received inventation "+currentMsg.getConversationId());	
 		}
 
 
-		/**
-		 * Test if all the slots are free
-		 * */
-		public boolean freeSlots(){
-			for(Slot s: slots) if(!s.currentState.equals(Slot.State.FREE)) return false;
-			return true;
-		}
-
 		@Override
 		public void action(){
+			int day=-1, startTime=-1, duration=-1;
 			// Can only respond to a message from contacts and a message is a proposal
 			ACLMessage reply = currentMsg.createReply();
 			if(currentMsg!=null){
 				try{
-					slots = (Slot[])currentMsg.getContentObject();
+					HashMap<String, Integer> invit = (HashMap<String, Integer>)currentMsg.getContentObject();
+					day = invit.get("day");
+					startTime = invit.get("startTime");
+					duration = invit.get("duration");
 				}catch(UnreadableException e){
 					logger.log(Level.SEVERE, agentName + " Error receiving message ");
 				}
-				if(freeSlots()){
+				if(myCalendar.areSlotsFree(day, startTime, duration)){
 					reply.setPerformative(ACLMessage.ACCEPT_PROPOSAL);
 				}else{
 					reply.setPerformative(ACLMessage.REJECT_PROPOSAL);
@@ -299,7 +321,8 @@ public class MeetingAgent extends Agent{
 			// Check if we got all response for this invitation
 			// if one is missing wait for it
 			// else looks anwers, if there is negative one we should send new invitation with new time
-			ArrayList<ACLMessage> list = (ArrayList<ACLMessage>)invitTable.get(currentMsg.getConversationId());
+			String id = currentMsg.getConversationId();
+			ArrayList<ACLMessage> list = (ArrayList<ACLMessage>)invitTable.get(id);
 			list.add(currentMsg);
 			if(list.size()==contacts.length){
 				for (ACLMessage msg : list) {
@@ -311,10 +334,12 @@ public class MeetingAgent extends Agent{
 				if(rejected.size()==0){
 					// everyone agreed on the slot, we can send confirmation
 					ACLMessage msg = new ACLMessage(ACLMessage.CONFIRM);
+					msg.setConversationId(id);
 					for(AID aid: contacts)
 						msg.addReceiver(aid);
 					myAgent.send(msg);
 				}else{
+					
 					// some rejected, we have to propose new slot
 				}
 			}else{
