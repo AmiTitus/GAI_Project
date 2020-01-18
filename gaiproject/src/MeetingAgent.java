@@ -371,7 +371,7 @@ public class MeetingAgent extends Agent{
 				invit = (HashMap<String, Integer>)currentMsg.getContentObject();
 				day = invit.get("day");
 				startTime = invit.get("startTime");
-				duration = invit.get("startTime");
+				duration = invit.get("duration");
 			}catch(UnreadableException e){}
 			
 			String id = currentMsg.getConversationId();
