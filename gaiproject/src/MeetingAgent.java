@@ -14,6 +14,7 @@ import jade.domain.FIPAAgentManagement.ServiceDescription;
 import java.util.logging.Level;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.logging.Logger;
 import java.util.Random;
 import jade.lang.acl.UnreadableException;
@@ -21,6 +22,8 @@ import java.io.IOException;
 import gaiproject.Calendar;
 import gaiproject.Slot;
 import gaiproject.MeetingAgentGui;
+import gaiproject.MessageContent;
+import java.io.Serializable;
 
 /**
  * @author Maxime Dhaisne
@@ -42,6 +45,9 @@ public class MeetingAgent extends Agent{
 	private String agentName;
 	private MeetingAgentGui gui;
 	private FSMBehaviour fsm;
+
+	// How many slots propositions to send back when the agent is not available
+	private int maxPropositionsNumber = 10;
 
 	private int invitId=0;
 	// Message currently processed
@@ -122,7 +128,6 @@ public class MeetingAgent extends Agent{
 		template.addServices(sd);
 		try {
 			DFAgentDescription[] result = DFService.search(this, template);
-			//System.out.println(getAID().getLocalName() + ": the following agent have been added to contact list");
 			// Create a sublist of contacts 
 			Random rand = new Random();
 			int nbContacts = rand.nextInt(result.length-1)+1; // Random int between 1 and nbAgents -1
@@ -150,6 +155,43 @@ public class MeetingAgent extends Agent{
 			fe.printStackTrace();
 		}
 	}
+
+	/**
+	 * Find and return a list of the nearest available slots
+	 *
+	 * @return ArrayList<Slot>
+	 * */
+	public ArrayList<Slot> findSimilarAvailableSlots(final int day, final int startTime, final int duration){
+		ArrayList<Slot> availableSlots = new ArrayList<Slot>();
+		for (int j = 0 ; j < myCalendar.numberDays ; j++){
+			if ((day-j < 0 && day+j >= myCalendar.numberDays) || availableSlots.size() >= maxPropositionsNumber){
+				break;
+			}
+			for (int i = 0; i < myCalendar.numberSlotPerDay ; i++){
+				if ((startTime-i < 0 && startTime+i+duration > myCalendar.numberSlotPerDay) || availableSlots.size() >= maxPropositionsNumber){
+					break;
+				}
+				if (day-j >= 0 && startTime-i >= 0 ){
+					if (myCalendar.areSlotsFree(day-j, startTime-i, duration))
+						availableSlots.add(myCalendar.getSlot(day-j, startTime-i));
+				}
+				if (day-j >= 0 && i != 0 && startTime+i+duration < myCalendar.numberSlotPerDay){
+					if (myCalendar.areSlotsFree(day-j, startTime+i, duration))
+						availableSlots.add(myCalendar.getSlot(day-j, startTime+i));
+				}
+				if (j != 0 && day+j < myCalendar.numberDays && startTime-i >= 0 ){
+					if (myCalendar.areSlotsFree(day+j, startTime-i, duration))
+						availableSlots.add(myCalendar.getSlot(day+j, startTime-i));
+				}
+				if (j != 0 && day+j < myCalendar.numberDays && i != 0 && startTime+i+duration < myCalendar.numberSlotPerDay ){
+					if (myCalendar.areSlotsFree(day+j, startTime+j, duration))
+						availableSlots.add(myCalendar.getSlot(day+j, startTime+i));
+				}
+			}
+		}
+		return availableSlots;
+	}
+
 
 	/**
 	 * Invoked from GUI, when a new invitation is created
@@ -257,7 +299,7 @@ public class MeetingAgent extends Agent{
 				for(AID aid: contacts)
 					msg.addReceiver(aid);
 				try{
-					msg.setContentObject(invit);
+					msg.setContentObject(new MessageContent(invit));
 				}catch(IOException e){
 					logger.log(Level.SEVERE, agentName + " Error sending message " + msg);
 				}
@@ -299,7 +341,8 @@ public class MeetingAgent extends Agent{
 			if(currentMsg!=null){
 				ACLMessage reply = currentMsg.createReply();
 				try{
-					invit = (HashMap<String, Integer>)currentMsg.getContentObject();
+					MessageContent msgContent = (MessageContent) currentMsg.getContentObject();
+					invit = (HashMap <String, Integer>) msgContent.getInvit();
 					day = invit.get("day");
 					startTime = invit.get("startTime");
 					duration = invit.get("duration");
@@ -321,8 +364,14 @@ public class MeetingAgent extends Agent{
 						myCalendar.manageSlot(day, startTime, duration, Slot.State.LOCK);
 				}
 				try{
-					reply.setContentObject(invit);
+					if(freeSlots){
+						reply.setContentObject(new MessageContent(invit));
+					} else {
+						ArrayList<Slot> availableSlots = findSimilarAvailableSlots(day, startTime, duration);
+						reply.setContentObject(new MessageContent(invit, availableSlots));
+					}
 				}catch(IOException e){
+					e.printStackTrace();
 					logger.log(Level.SEVERE, agentName + "Error adding ContentObject to msg");
 					nextState = -1;
 					return;
@@ -368,7 +417,8 @@ public class MeetingAgent extends Agent{
 			int day=-1, startTime=-1, duration=-1;
 
 			try{
-				invit = (HashMap<String, Integer>)currentMsg.getContentObject();
+				MessageContent msgContent = (MessageContent) currentMsg.getContentObject();
+				invit = (HashMap <String, Integer>) msgContent.getInvit();
 				day = invit.get("day");
 				startTime = invit.get("startTime");
 				duration = invit.get("duration");
@@ -402,7 +452,7 @@ public class MeetingAgent extends Agent{
 							ACLMessage reply = msg.createReply();
 							reply.setPerformative(ACLMessage.CONFIRM);
 							try{	
-								reply.setContentObject(invit);
+								reply.setContentObject(new MessageContent(invit));
 							}catch(IOException e){}
 							System.out.println("===== " + agentName + " replied to " +currentMsg.getSender().getLocalName()+" with "+ACLMessage.getPerformative(reply.getPerformative()));
 							myAgent.send(reply);
@@ -411,8 +461,134 @@ public class MeetingAgent extends Agent{
 						list.clear();
 					}
 				}else{
-					
 					// some rejected, we have to propose new slot
+					// Removing Proposed state from initial slot
+					MessageContent msg1 = null;
+					for (int i = 0 ; i < rejected.size() ; i++) {
+						try {
+							msg1 = (MessageContent) rejected.get(i).getContentObject();
+						} catch (UnreadableException e) {}
+					}
+					if (msg1 == null) {
+						logger.log(Level.SEVERE, agentName + " cannot read any proposition made by other agents");
+						return;
+					}
+
+					HashMap <String, Integer> initialInvit = invit;
+					
+					// Check to find at least a common available slot between all propositions
+					ArrayList<Slot> slotList = (ArrayList<Slot>) msg1.getAvailableSlots();
+					for(ACLMessage cur : rejected){
+						MessageContent mes = null;
+						try {
+							mes = (MessageContent) cur.getContentObject();
+						} catch (UnreadableException e){}
+						if (mes.getAvailableSlots() != null){
+							Iterator <Slot> i = slotList.iterator();
+							while (i.hasNext()){
+							//for (Slot curElem : slotList) {
+							Slot curElem = i.next();
+								boolean exists = false;
+								for (Slot curElem2 : mes.getAvailableSlots()){
+									if (curElem.day == curElem2.day && curElem.startTime == curElem2.startTime){
+										exists = true ;
+										break;
+									}
+								}
+								if (!exists) i.remove();
+							}
+						}
+						else rejected.remove(cur); // Remove useless answers
+					}
+
+					// Selecting new slot
+					ArrayList<Slot> validSlots = new ArrayList<Slot>();
+					Random slotRand = new Random();
+					Slot selectedSlot = null;
+
+					// Check availability in slotList
+					for (Slot cur : slotList){
+						if (myCalendar.areSlotsFree(cur.day, cur.startTime, initialInvit.get("duration"))){
+							validSlots.add(cur);
+							selectedSlot = cur;
+							break;
+						}
+					}
+
+					if(validSlots.size() > 0)
+						selectedSlot = validSlots.get(slotRand.nextInt(validSlots.size()));
+
+					// Check availability in all recommandations
+					if (selectedSlot == null){
+						validSlots = new ArrayList();
+						for (ACLMessage cur : rejected){
+							MessageContent mes = null;
+							try {
+								mes = (MessageContent) cur.getContentObject();
+							} catch (UnreadableException e) {}
+							if (mes == null) continue;
+							for (Slot curSlot : mes.getAvailableSlots()){
+								if (myCalendar.areSlotsFree(curSlot.day, curSlot.startTime, initialInvit.get("duration"))){
+									validSlots.add(curSlot);
+									break;
+								}
+							}
+							if (selectedSlot != null) break;
+						}
+						if(validSlots.size() > 0)
+							selectedSlot = validSlots.get(slotRand.nextInt(validSlots.size()));
+					}
+
+					// Search for a free slot in our calender 
+					if (selectedSlot == null) {
+						validSlots = new ArrayList<Slot>();
+						for (int i = 0 ; i < myCalendar.numberDays ; i++) {
+							for (int j = 0 ; j < myCalendar.numberSlotPerDay-initialInvit.get("duration") ; j++){
+								if (myCalendar.areSlotsFree(i, j, initialInvit.get("duration"))){
+									validSlots.add(myCalendar.getSlot(i,j));
+									break;
+								}
+							}
+							if (selectedSlot != null) break;
+						}
+						if(validSlots.size() > 0)
+							selectedSlot = validSlots.get(slotRand.nextInt(validSlots.size()));
+					}
+					
+					// If no free slot found, we reuse the initial invitation
+					if (selectedSlot == null) {
+						selectedSlot = myCalendar.getSlot(initialInvit.get("day"), initialInvit.get("startTime"));
+					}
+
+					// Give state free on the initial slot
+					myCalendar.manageSlot(initialInvit.get("day"), initialInvit.get("duration"), initialInvit.get("startTime"), Slot.State.FREE);
+
+					// Sending invit
+					ACLMessage msg = new ACLMessage(ACLMessage.PROPOSE);
+					invit = new HashMap<String, Integer>();
+					myCalendar.manageSlot(selectedSlot.day, selectedSlot.startTime, initialInvit.get("duration"), Slot.State.PROPOSED);
+					invit.put("day", selectedSlot.day);
+					invit.put("startTime", selectedSlot.startTime);
+					invit.put("duration",initialInvit.get("duration"));
+
+					// If the agent doesnt have contacts, we got an error and don't send message
+					if(contacts == null || contacts.length == 0){
+						myCalendar.manageSlot(day, startTime, duration, Slot.State.FREE);
+						logger.log(Level.SEVERE, agentName + " No contacts");
+					}else{
+						msg.setConversationId(id);
+						for(AID aid: contacts)
+							msg.addReceiver(aid);
+						try{
+							msg.setContentObject(new MessageContent(invit));
+						}catch(IOException e){
+							logger.log(Level.SEVERE, agentName + " Error sending message " + msg);
+						}
+						// Create a new Entry in invitMap for this new Invitation
+						invitTable.put(msg.getConversationId(), new ArrayList<ACLMessage>());	
+						myAgent.send(msg);
+						logger.log(Level.INFO, agentName + " sent invitation "+msg.getConversationId()+" to his contacts.");
+					}
 				}
 			}
 			nextState = 1;

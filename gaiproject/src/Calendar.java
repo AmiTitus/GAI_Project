@@ -43,7 +43,7 @@ class Calendar {
 	private void initCalendarTable(){
 		for(int day=0; day<this.numberDays;day++){
 			for(int time=0; time<this.numberSlotPerDay; time++){
-				this.calendarTable[day][time] = new Slot(time);
+				this.calendarTable[day][time] = new Slot(day, time);
 			}
 		}
 	}
@@ -56,9 +56,9 @@ class Calendar {
 			for (int time=0; time<this.numberSlotPerDay; time++){
 				x = Math.random();
 				if (x < treshold){
-					s = new Slot(time, true);
+					s = new Slot(day, time, true);
 				}else{
-					s = new Slot(time, false);
+					s = new Slot(day, time, false);
 				}
 				this.calendarTable[day][time] = s;
 			}
@@ -92,9 +92,9 @@ class Calendar {
 	 * */
 	public boolean areSlotsFree(int day, int startTime, int duration){	
 		assert startTime > 0 && startTime < this.numberSlotPerDay : "Incorrect value startTime";
-		assert duration > 0 : "Incorrect value duration";
-		assert day < this.numberDays : "Incorrect value day";
-		for(int t=startTime; t<startTime+duration-1; t++) if (!this.calendarTable[day][t].currentState.equals(Slot.State.FREE)) return false;
+		assert duration > 0 && startTime+duration <= this.numberSlotPerDay: "Incorrect value duration";
+		assert day >0 && day < this.numberDays : "Incorrect value day";
+		for(int t=startTime; t<startTime+duration; t++) if (!this.calendarTable[day][t].currentState.equals(Slot.State.FREE)) return false;
 		return true;
 	}
 
