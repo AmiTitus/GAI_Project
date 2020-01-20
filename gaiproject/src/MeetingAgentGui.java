@@ -36,7 +36,23 @@ class MeetingAgentGui extends JFrame {
 		protected void setDaltonism(boolean d){
 			this.daltonism = d;
 		}
-		
+
+		private Color wantedColor(Slot s){
+			Color c = new Color(0, 0, 0);
+			if(s.wanted==0){c = new Color(179,255,199);}
+			else if(s.wanted<=0.1){c = new Color(161, 237, 181);}
+			else if(s.wanted<=0.2){c = new Color(143, 220, 163);}
+			else if(s.wanted<=0.3){c = new Color(125, 203, 145);}
+			else if(s.wanted<=0.4){c = new Color(107, 185, 128);}
+			else if(s.wanted<=0.5){c = new Color(89, 168, 110);}
+			else if(s.wanted<=0.6){c = new Color(71, 151, 92);}	
+			else if(s.wanted<=0.7){c = new Color(53, 133, 75);}
+			else if(s.wanted<=0.8){c = new Color(35, 116, 57);}
+			else if(s.wanted<=0.9){c = new Color(17, 99, 39);}	
+			else if(s.wanted<=1.0){c = new Color(0, 82, 22);}
+			return c;
+		}
+
 		/* *
 		 *	Draw JComponents
 		 * */
@@ -46,7 +62,7 @@ class MeetingAgentGui extends JFrame {
 			for(int day=0; day<calendar.calendarTable.length; day++){
 				for(int time=0; time<calendar.calendarTable[0].length; time++){
 					if (calendar.getSlot(day, time).currentState.equals(Slot.State.FREE)){
-						g.setColor(this.daltonism?Color.GREEN:Color.GREEN);
+						g.setColor(wantedColor(calendar.getSlot(day, time)));
 					}else if(calendar.getSlot(day, time).currentState.equals(Slot.State.PROPOSED)){
 						g.setColor(this.daltonism?Color.PINK:Color.ORANGE);
 					}else{

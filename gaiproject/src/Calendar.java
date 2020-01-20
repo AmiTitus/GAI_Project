@@ -2,6 +2,7 @@
  * 
  */
 package gaiproject;
+import java.util.ArrayList;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import gaiproject.Slot;
@@ -50,15 +51,16 @@ class Calendar {
 
 	private void randomlyInitCalendarTable(){
 		Double treshold = 0.25;
-		double x;
+		double x, wanted;
 		Slot s;
 		for (int day=0; day<this.numberDays; day++){
 			for (int time=0; time<this.numberSlotPerDay; time++){
 				x = Math.random();
+				wanted = Math.random();
 				if (x < treshold){
-					s = new Slot(day, time, true);
+					s = new Slot(day, time, wanted, true);
 				}else{
-					s = new Slot(day, time, false);
+					s = new Slot(day, time, wanted, false);
 				}
 				this.calendarTable[day][time] = s;
 			}
@@ -158,6 +160,22 @@ class Calendar {
 		return this.calendarTable[day][startTime];
 	}
 
+	/**
+	 * Get an ArrayList of wanted slot equal or greater than the treshhold
+	 * @param day	Day
+	 * @param treshhold 	treshhold value
+	 * @return ArrayList<Slot>
+	 * */
+	public ArrayList<Slot> getWantedSlots(int day, double treshhold){
+		assert day < this.numberDays && day >= 0: "Incorrect value day";
+		assert treshhold >= 0 && treshhold <= 1: "Incorrect treshhold value";
+		ArrayList<Slot> slots = new ArrayList<Slot>();
+		for(int t=0; t<this.numberSlotPerDay; t++){
+			if(this.calendarTable[day][t].wanted >= treshhold)
+				slots.add(this.calendarTable[day][t]);
+		}
+		return slots;
+	}
 
 	public Slot[][] getCalendarTable(){
 		return this.calendarTable;
