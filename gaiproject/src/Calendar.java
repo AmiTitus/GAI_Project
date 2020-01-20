@@ -171,7 +171,8 @@ class Calendar {
 		assert treshhold >= 0 && treshhold <= 1: "Incorrect treshhold value";
 		ArrayList<Slot> slots = new ArrayList<Slot>();
 		for(int t=0; t<this.numberSlotPerDay; t++){
-			if(this.calendarTable[day][t].wanted >= treshhold)
+			if(this.calendarTable[day][t].wanted >= treshhold &&
+			   this.calendarTable[day][t].currentState == Slot.State.FREE)
 				slots.add(this.calendarTable[day][t]);
 		}
 		return slots;
