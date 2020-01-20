@@ -12,14 +12,25 @@ import java.io.Serializable;
  *
  */
 public class MessageContent implements Serializable{
+	
 	protected ArrayList <Slot> availableSlots;
 	protected HashMap<String, Integer> invit;
+	protected Integer cycle=0;
 
+	/**
+	 * Create a MessageContent with an invitation
+	 * @param inv 	HashMap<String, Integer>
+	 * */
 	public MessageContent(HashMap<String, Integer> inv){
 		this.invit = inv;
 		this.availableSlots = null;
 	}
 
+	/**
+	 * Create a MessageContent with an invitation and availableSlots
+	 * @param inv 	HashMap<String, Integer>
+	 * @param slots	ArrayList<Slot>
+	 * */
 	public MessageContent(HashMap<String, Integer> inv, ArrayList<Slot> slots){
 		this.availableSlots = new ArrayList<Slot>();
 		for (Slot elem : slots){
