@@ -36,12 +36,23 @@ import java.io.Serializable;
  * - ACCEPT_PROPOSAL:
  * - CONFIRM: confirm the meeting slot(s) and lock them
  * - ACCEPT / REJECT
+ * Exceptionnal Message:
+ * - CANCEL: This performative indicates that the agents will leave the meeting
  */
+
 public class MeetingAgent extends Agent{
-	
+
+	static final double EXPECTATION_BASIC_VALUE = 1.0;
+	static final double EXPECTATION_DECREASE_RATE = 0.1;
+	static final int MAX_TRIALS_RAGEQUIT = 5;
+
 	private Calendar myCalendar;
 	private AID[] contacts;
-	private Logger logger = Logger.getLogger(MeetingAgent.class.getName());
+	private static Logger logger = null;
+	static {
+		System.setProperty("java.util.logging.SimpleFormatter.format", "[%1$tF %1$tT] [%4$-7s] %5$s %n");
+		logger = Logger.getLogger(MeetingAgent.class.getName());
+	}
 	private String agentName;
 	private MeetingAgentGui gui;
 	private FSMBehaviour fsm;
@@ -52,8 +63,14 @@ public class MeetingAgent extends Agent{
 	private int invitId=0;
 	// Message currently processed
 	private ACLMessage currentMsg;
+	private String currentId;
 	// Map of all messages for each invitation
 	private HashMap<String, ArrayList<ACLMessage>> invitTable = new HashMap<String, ArrayList<ACLMessage>>();
+	// HashMap of invitation
+	// Owner of Invitation: record number of trial to negociate for this invitation
+	// Participant: record number of new proposition he made for this negociation,
+	// 	By increasing this value, agent see his expectation decreasing
+	private HashMap<String, Integer> invitCycle = new HashMap<String, Integer>();
 
 	protected void setup(){
 		// Init calendar randomly to have already planned meeting
@@ -208,7 +225,7 @@ public class MeetingAgent extends Agent{
 		private int nextState=0;
 
 		public void onStart(){
-			System.out.println(agentName + " is in Wait state");
+			logger.log(Level.INFO, agentName + " is in Wait state");
 		}
 
 		@Override
@@ -219,6 +236,7 @@ public class MeetingAgent extends Agent{
 			currentMsg = myAgent.receive();
 			if(currentMsg!=null){
 				System.out.println("===== "+agentName+" received "+currentMsg.getPerformative(currentMsg.getPerformative()) +" from " + currentMsg.getSender().getLocalName());
+				currentId = currentMsg.getConversationId();
 				if(currentMsg.getPerformative()==ACLMessage.PROPOSE ||
 				   currentMsg.getPerformative()==ACLMessage.CONFIRM){
 					nextState=1;
@@ -235,7 +253,6 @@ public class MeetingAgent extends Agent{
 		}
 		public int onEnd(){
 			gui.updateCalendar();
-			logger.log(Level.INFO, agentName + " is going to "+nextState+ " from "+getClass().getName());
 			return nextState;
 		}
 	}
@@ -303,8 +320,11 @@ public class MeetingAgent extends Agent{
 				}catch(IOException e){
 					logger.log(Level.SEVERE, agentName + " Error sending message " + msg);
 				}
-				// Create a new Entry in invitMap for this new Invitation
+				// Create a new Entry in invitTable for this new Invitation
 				invitTable.put(msg.getConversationId(), new ArrayList<ACLMessage>());	
+				// Create a new Entrey in invitCycle for this new Invitation
+				invitCycle.put(msg.getConversationId(), 0);
+
 				myAgent.send(msg);
 				logger.log(Level.INFO, agentName + " sent invitation "+msg.getConversationId()+" to his contacts.");
 			}
@@ -336,8 +356,8 @@ public class MeetingAgent extends Agent{
 		public void action(){
 			int day=-1, startTime=-1, duration=-1;
 			boolean freeSlots = false;
-			HashMap<String, Integer> invit = new HashMap<String, Integer>();
-			// Can only respond to a message from contacts and a message is a proposal
+			HashMap<String, Integer> invit = new HashMap<String, Integer>();	
+
 			if(currentMsg!=null){
 				ACLMessage reply = currentMsg.createReply();
 				try{
@@ -356,7 +376,16 @@ public class MeetingAgent extends Agent{
 					return;
 				}
 				freeSlots = myCalendar.areSlotsFree(day, startTime, duration);
-				if (currentMsg.getPerformative()==ACLMessage.PROPOSE){
+				
+				// we add entry for this invitation if it doesnt exist, then we update it by 1
+				invitCycle.putIfAbsent(currentId, -1);
+				invitCycle.replace(currentId, invitCycle.get(currentId)+1);
+
+
+				// If maximum number of trials is reached, agent is leaving meeting
+				if (invitCycle.get(currentId) >= MAX_TRIALS_RAGEQUIT){
+					reply.setPerformative(ACLMessage.CANCEL);
+				}else if (currentMsg.getPerformative()==ACLMessage.PROPOSE){
 					reply.setPerformative((freeSlots)?ACLMessage.ACCEPT_PROPOSAL:ACLMessage.REJECT_PROPOSAL);
 				}else if(currentMsg.getPerformative()==ACLMessage.CONFIRM){
 					reply.setPerformative((freeSlots)?ACLMessage.AGREE:ACLMessage.REFUSE);
@@ -367,7 +396,12 @@ public class MeetingAgent extends Agent{
 					if(freeSlots){
 						reply.setContentObject(new MessageContent(invit));
 					} else {
+						double wanted = EXPECTATION_BASIC_VALUE - invitCycle.get(currentId)*EXPECTATION_DECREASE_RATE;
 						ArrayList<Slot> availableSlots = findSimilarAvailableSlots(day, startTime, duration);
+						ArrayList<Slot> wantedSlots = myCalendar.getWantedSlots(day, wanted);
+						// Intersection of wantedSlots and availableSlots
+						availableSlots.retainAll(wantedSlots); 	
+
 						reply.setContentObject(new MessageContent(invit, availableSlots));
 					}
 				}catch(IOException e){
@@ -385,7 +419,6 @@ public class MeetingAgent extends Agent{
 
 		public int onEnd(){
 			gui.updateCalendar();
-			logger.log(Level.INFO, agentName+" is going to "+nextState+" from ManageInvitation");
 			return nextState;
 		}
 	}
@@ -412,6 +445,7 @@ public class MeetingAgent extends Agent{
 			// else looks anwers, if there is negative one we should send new invitation with new time
 			ArrayList<ACLMessage> rejected = new ArrayList<ACLMessage>();
 			ArrayList<ACLMessage> accepted = new ArrayList<ACLMessage>();
+			ArrayList<ACLMessage> canceled = new ArrayList<ACLMessage>();
 
 			HashMap<String, Integer> invit = new HashMap<String, Integer>();
 			int day=-1, startTime=-1, duration=-1;
@@ -424,11 +458,14 @@ public class MeetingAgent extends Agent{
 				duration = invit.get("duration");
 			}catch(UnreadableException e){}
 			
-			String id = currentMsg.getConversationId();
+			String id = currentId;
 			ArrayList<ACLMessage> list = (ArrayList<ACLMessage>)invitTable.get(id);
 			list.add(currentMsg);
 
-			if(list.size()==contacts.length){
+			if(list.size()>contacts.length){
+				logger.log(Level.SEVERE, "The list cannot be bigger than thenumber of contact");
+				return;
+			}else if(list.size()==contacts.length){
 				for (ACLMessage msg : list) {
 					switch(msg.getPerformative()){
 						case ACLMessage.ACCEPT_PROPOSAL: accepted.add(msg);break;
@@ -436,9 +473,14 @@ public class MeetingAgent extends Agent{
 						
 						case ACLMessage.AGREE: accepted.add(msg);break;
 						case ACLMessage.REFUSE: rejected.add(msg);break;
+					
+						case ACLMessage.CANCEL: canceled.add(msg);break;
 					}
 				}
-				
+
+				for (ACLMessage msg: canceled)
+					logger.log(Level.INFO, msg.getSender().getLocalName()+" removed from meeting " + currentId);
+
 				if(rejected.size()==0){
 					// If messages are AGREE so the meeting is done
 					if(currentMsg.getPerformative() == ACLMessage.AGREE){
@@ -520,7 +562,7 @@ public class MeetingAgent extends Agent{
 
 					// Check availability in all recommandations
 					if (selectedSlot == null){
-						validSlots = new ArrayList();
+						validSlots = new ArrayList<Slot>();
 						for (ACLMessage cur : rejected){
 							MessageContent mes = null;
 							try {
@@ -562,7 +604,6 @@ public class MeetingAgent extends Agent{
 
 					// Give state free on the initial slot
 					myCalendar.manageSlot(initialInvit.get("day"), initialInvit.get("duration"), initialInvit.get("startTime"), Slot.State.FREE);
-
 					// Sending invit
 					ACLMessage msg = new ACLMessage(ACLMessage.PROPOSE);
 					invit = new HashMap<String, Integer>();
@@ -584,11 +625,12 @@ public class MeetingAgent extends Agent{
 						}catch(IOException e){
 							logger.log(Level.SEVERE, agentName + " Error sending message " + msg);
 						}
-						// Create a new Entry in invitMap for this new Invitation
-						invitTable.put(msg.getConversationId(), new ArrayList<ACLMessage>());	
+						invitCycle.replace(currentId, invitCycle.get(currentId)+1);
 						myAgent.send(msg);
 						logger.log(Level.INFO, agentName + " sent invitation "+msg.getConversationId()+" to his contacts.");
 					}
+					// clear the list to wait for new response
+					list.clear();
 				}
 			}
 			nextState = 1;
