@@ -399,8 +399,21 @@ public class MeetingAgent extends Agent{
 						double wanted = EXPECTATION_BASIC_VALUE - invitCycle.get(currentId)*EXPECTATION_DECREASE_RATE;
 						ArrayList<Slot> availableSlots = findSimilarAvailableSlots(day, startTime, duration);
 						ArrayList<Slot> wantedSlots = myCalendar.getWantedSlots(day, wanted);
+						ArrayList<Slot> availableSlotsInit = (ArrayList<Slot>)availableSlots.clone();
+						
 						// Intersection of wantedSlots and availableSlots
-						availableSlots.retainAll(wantedSlots); 	
+						availableSlots.retainAll(wantedSlots);
+						while(availableSlots.size()==0){
+							availableSlots = (ArrayList<Slot>)availableSlotsInit.clone();
+							invitCycle.replace(currentId, invitCycle.get(currentId)+1);
+							wantedSlots = myCalendar.getWantedSlots(day, wanted);
+							availableSlots.retainAll(wantedSlots);
+						}
+
+						// availableSlots should always have at least one proposition
+						if(availableSlots.size() == 0){
+							logger.log(Level.WARNING, agentName + " should have at least one proposition but got 0");
+						}
 
 						reply.setContentObject(new MessageContent(invit, availableSlots));
 					}
@@ -410,7 +423,11 @@ public class MeetingAgent extends Agent{
 					nextState = -1;
 					return;
 				}
-				System.out.println("===== "+agentName + " replied to "+currentMsg.getSender().getLocalName()+" with " + reply.getPerformative(reply.getPerformative()));
+				if(reply.getPerformative() == ACLMessage.AGREE || reply.getPerformative() == ACLMessage.ACCEPT_PROPOSAL)
+					System.out.println("===== "+agentName + " replied to "+currentMsg.getSender().getLocalName()+
+							   " with " + reply.getPerformative(reply.getPerformative()) + 
+							   " day: " + day + " time: " + startTime + " duration: " + duration);
+				
 				myAgent.send(reply);
 			}
 			nextState = 1;
