@@ -132,12 +132,10 @@ class MeetingAgentGui extends JFrame {
 					text = durationField.getText().trim();
 					int duration = Integer.parseInt(text);
 
-					if (day >= myCalendar.numberDays ||
-					    time >= myCalendar.numberSlotPerDay ||
-					    duration+time > myCalendar.numberSlotPerDay) {
-						System.out.println("Error: The meeting information are invalid");
-						System.out.println(duration+time);
-						System.out.println(myCalendar.numberSlotPerDay);
+					if ((day >= myCalendar.numberDays || day < 0)||
+					    (time >= myCalendar.numberSlotPerDay || time < 0)||
+					    duration+time > myCalendar.numberSlotPerDay || duration+time < 0) {	
+						JOptionPane.showMessageDialog(MeetingAgentGui.this, "Error: The meeting information are invalid", "Error", JOptionPane.ERROR_MESSAGE);
 						return;
 					}
 					myAgent.sendInvitation(day, time, duration);
@@ -154,7 +152,7 @@ class MeetingAgentGui extends JFrame {
 		p.add(addButton);
 		getContentPane().add(p, BorderLayout.SOUTH);
 		
-		addWindowListener(new	WindowAdapter() {
+		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
 				myAgent.doDelete();
 			}
