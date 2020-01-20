@@ -15,7 +15,6 @@ public class MessageContent implements Serializable{
 	
 	protected ArrayList <Slot> availableSlots;
 	protected HashMap<String, Integer> invit;
-	protected Integer cycle=0;
 
 	/**
 	 * Create a MessageContent with an invitation
