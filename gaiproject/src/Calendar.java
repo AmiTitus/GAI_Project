@@ -186,12 +186,12 @@ class Calendar {
 		String lines = "";
 		String line = "----";
 		String column = "|";
-		boolean l;
+		Slot.State l;
 		for (int day=0; day<this.numberDays; day++){
 			lines += "\n"+column;
 			for (int time=0; time<this.numberSlotPerDay; time++){
-				l = this.calendarTable[day][time].lock;
-				lines += (l) ? " O " : "   ";
+				l = this.calendarTable[day][time].currentState;
+				lines += (l == Slot.State.LOCK) ? " O " : (l == Slot.State.PROPOSED) ? " P " : "   ";
 				lines += column;
 			}
 		}
