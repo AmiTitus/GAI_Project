@@ -138,7 +138,6 @@ class Calendar {
 		assert duration > 0 : "Incorrect value duration";
 		assert day < this.numberDays : "Incorrect value day";
 		for(int time=startTime; time<startTime+duration; time++){
-			this.calendarTable[day][time].propose();
 			switch(state){
 				case FREE: this.calendarTable[day][time].unlock();break;
 				case LOCK: this.calendarTable[day][time].lock();break;

@@ -71,6 +71,9 @@ public class MeetingAgent extends Agent{
 	// Participant: record number of new proposition he made for this negociation,
 	// 	By increasing this value, agent see his expectation decreasing
 	private HashMap<String, Integer> invitCycle = new HashMap<String, Integer>();
+	// HashMap of participants canceled
+	// Allows us to reduce the size of expected response to an invit by the number of people who canceled
+	private HashMap<String, Integer> invitCanceled = new HashMap<String, Integer>();
 
 	protected void setup(){
 		// Init calendar randomly to have already planned meeting
@@ -84,7 +87,7 @@ public class MeetingAgent extends Agent{
 		dfd.setName(getAID());
 		ServiceDescription sd = new ServiceDescription();
 		sd.setName(agentName);
-		sd.setType("");
+		sd.setType("meet-negoce");
 		dfd.addServices(sd);
 		try{
 			DFService.register(this, dfd);
@@ -141,7 +144,7 @@ public class MeetingAgent extends Agent{
 		// Init contact list
 		DFAgentDescription template = new DFAgentDescription();
 		ServiceDescription sd = new ServiceDescription();
-		sd.setType("");
+		sd.setType("meet-negoce");
 		template.addServices(sd);
 		try {
 			DFAgentDescription[] result = DFService.search(this, template);
@@ -474,7 +477,7 @@ public class MeetingAgent extends Agent{
 			ArrayList<ACLMessage> canceled = new ArrayList<ACLMessage>();
 
 			HashMap<String, Integer> invit = new HashMap<String, Integer>();
-			int day=-1, startTime=-1, duration=-1;
+			int day=-1, startTime=-1, duration=-1, cancelLength=0, listSize=0;
 
 			try{
 				MessageContent msgContent = (MessageContent) currentMsg.getContentObject();
@@ -488,10 +491,21 @@ public class MeetingAgent extends Agent{
 			ArrayList<ACLMessage> list = (ArrayList<ACLMessage>)invitTable.get(id);
 			list.add(currentMsg);
 
-			if(list.size()>contacts.length){
+			if(currentMsg.getPerformative()==ACLMessage.CANCEL){
+				if(!invitCanceled.containsKey(id)){
+					invitCanceled.put(id, 1);
+				}else{
+					invitCanceled.replace(id, invitCanceled.get(id)+1);
+				}
+				cancelLength = invitCanceled.get(id);
+			}
+
+			listSize = list.size() - cancelLength;
+
+			if(listSize > contacts.length){
 				logger.log(Level.SEVERE, "The list cannot be bigger than thenumber of contact");
 				return;
-			}else if(list.size()==contacts.length){
+			}else if(listSize == contacts.length){
 				for (ACLMessage msg : list) {
 					switch(msg.getPerformative()){
 						case ACLMessage.ACCEPT_PROPOSAL: accepted.add(msg);break;
@@ -512,8 +526,10 @@ public class MeetingAgent extends Agent{
 					if(currentMsg.getPerformative() == ACLMessage.AGREE){
 						// lock meeting in calendar
 						myCalendar.manageSlot(day, startTime, duration, Slot.State.LOCK);
-						// remove entry from table
+						// remove entry from Structures
 						invitTable.remove(id);
+						invitCanceled.remove(id);
+						invitCycle.remove(id);
 					}else if(currentMsg.getPerformative() == ACLMessage.ACCEPT_PROPOSAL){
 						// everyone agreed on the slot, we can send confirmation
 						for(ACLMessage msg : list){
@@ -637,8 +653,6 @@ public class MeetingAgent extends Agent{
 					invit.put("day", selectedSlot.day);
 					invit.put("startTime", selectedSlot.startTime);
 					invit.put("duration",initialInvit.get("duration"));
-					//gui.updateCalendar();
-					myCalendar.prettyPrint();
 
 					// If the agent doesnt have contacts, we got an error and don't send message
 					if(contacts == null || contacts.length == 0){
