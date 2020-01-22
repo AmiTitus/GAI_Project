@@ -23,7 +23,7 @@ class MeetingAgentGui extends JFrame {
 	 * */
 	private class CalendarGrid extends JComponent{
 		private static final long serialVersionUID = 2L;
-		private boolean daltonism = false;
+		private boolean colorblind = false;
 		private Calendar calendar;
 
 		CalendarGrid(Calendar calendar) {
@@ -34,7 +34,7 @@ class MeetingAgentGui extends JFrame {
         	}
 
 		protected void setDaltonism(boolean d){
-			this.daltonism = d;
+			this.colorblind = d;
 		}
 
 		private Color wantedColor(Slot s){
@@ -64,9 +64,9 @@ class MeetingAgentGui extends JFrame {
 					if (calendar.getSlot(day, time).currentState.equals(Slot.State.FREE)){
 						g.setColor(wantedColor(calendar.getSlot(day, time)));
 					}else if(calendar.getSlot(day, time).currentState.equals(Slot.State.PROPOSED)){
-						g.setColor(this.daltonism?Color.PINK:Color.ORANGE);
+						g.setColor(this.colorblind?Color.PINK:Color.ORANGE);
 					}else{
-						g.setColor(this.daltonism?Color.BLUE:Color.RED);
+						g.setColor(this.colorblind?Color.BLUE:Color.RED);
 					}
 					Rectangle r = new Rectangle(time*RECT_SIZE, day*RECT_SIZE, RECT_SIZE, RECT_SIZE);
 					g.fillRect(r.x, r.y, r.width, r.height);
@@ -83,7 +83,7 @@ class MeetingAgentGui extends JFrame {
 		MeetingAgent myAgent = a;
 		Calendar myCalendar = a.getCalendar();
 
-		Checkbox daltonism = new Checkbox("Quentin"); 
+		Checkbox colorblind = new Checkbox("Quentin"); 
 		
 		// Calendar Panel
 		calendarPanel = new JPanel();
@@ -107,14 +107,14 @@ class MeetingAgentGui extends JFrame {
 		durationField = new JTextField(15);
 		p.add(durationField);
 		
-		p.add(daltonism);
+		p.add(colorblind);
 		
 		getContentPane().add(p, BorderLayout.CENTER);
 		getContentPane().add(calendarPanel, BorderLayout.WEST);
 
 		JButton addButton = new JButton("Create Invitation");
 
-		daltonism.addItemListener(new ItemListener(){
+		colorblind.addItemListener(new ItemListener(){
 			public void itemStateChanged(ItemEvent e){
 				calendarGrid.setDaltonism(e.getStateChange()==1);
 				calendarGrid.repaint();
