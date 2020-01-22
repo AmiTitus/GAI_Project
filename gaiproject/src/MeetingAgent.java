@@ -511,6 +511,16 @@ public class MeetingAgent extends Agent{
 				cancelLength = invitCanceled.get(id);
 			}
 
+			// If everyone canceled his participation, we cancel meeting
+			if(list.size() == cancelLength){	
+				myCalendar.manageSlot(day, startTime, duration, Slot.State.LOCK);
+				// remove entry from Structures
+				invitTable.remove(id);
+				invitCanceled.remove(id);
+				invitCycle.remove(id);
+				return;
+			}
+
 			listSize = list.size() - cancelLength;
 
 			if(listSize > contacts.length){
