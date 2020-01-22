@@ -338,6 +338,12 @@ public class MeetingAgent extends Agent{
 		
 	}
 
+	public double getWanted(){
+		double wanted = EXPECTATION_BASIC_VALUE - invitCycle.get(currentId)*EXPECTATION_DECREASE_RATE;
+		return wanted;
+	}
+
+
 	/**
 	 * This Behaviour computes an invitation
 	 **/
@@ -396,18 +402,21 @@ public class MeetingAgent extends Agent{
 					if(freeSlots){
 						reply.setContentObject(new MessageContent(invit));
 					} else {
-						double wanted = EXPECTATION_BASIC_VALUE - invitCycle.get(currentId)*EXPECTATION_DECREASE_RATE;
 						ArrayList<Slot> availableSlots = findSimilarAvailableSlots(day, startTime, duration);
-						ArrayList<Slot> wantedSlots = myCalendar.getWantedSlots(day, wanted);
+						ArrayList<Slot> wantedSlots = myCalendar.getWantedSlots(day, getWanted());
 						ArrayList<Slot> availableSlotsInit = (ArrayList<Slot>)availableSlots.clone();
 						
 						// Intersection of wantedSlots and availableSlots
 						availableSlots.retainAll(wantedSlots);
-						while(availableSlots.size()==0){
+						while(availableSlots.size()==0 && getWanted() >= MAX_TRIALS_RAGEQUIT){
 							availableSlots = (ArrayList<Slot>)availableSlotsInit.clone();
 							invitCycle.replace(currentId, invitCycle.get(currentId)+1);
-							wantedSlots = myCalendar.getWantedSlots(day, wanted);
+							wantedSlots = myCalendar.getWantedSlots(day, getWanted());
 							availableSlots.retainAll(wantedSlots);
+						}
+
+						if(invitCycle.get(currentId) >= MAX_TRIALS_RAGEQUIT){
+							reply.setPerformative(ACLMessage.CANCEL);	
 						}
 
 						// availableSlots should always have at least one proposition
