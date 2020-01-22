@@ -629,7 +629,7 @@ public class MeetingAgent extends Agent{
 					}
 
 					// Give state free on the initial slot
-					myCalendar.manageSlot(initialInvit.get("day"), initialInvit.get("duration"), initialInvit.get("startTime"), Slot.State.FREE);
+					myCalendar.manageSlot(initialInvit.get("day"), initialInvit.get("startTime"), initialInvit.get("duration"), Slot.State.FREE);
 					// Sending invit
 					ACLMessage msg = new ACLMessage(ACLMessage.PROPOSE);
 					invit = new HashMap<String, Integer>();
@@ -637,6 +637,8 @@ public class MeetingAgent extends Agent{
 					invit.put("day", selectedSlot.day);
 					invit.put("startTime", selectedSlot.startTime);
 					invit.put("duration",initialInvit.get("duration"));
+					//gui.updateCalendar();
+					myCalendar.prettyPrint();
 
 					// If the agent doesnt have contacts, we got an error and don't send message
 					if(contacts == null || contacts.length == 0){
@@ -660,7 +662,7 @@ public class MeetingAgent extends Agent{
 				}
 			}
 			nextState = 1;
-			
+			gui.updateCalendar();
 		}
 
 		public int onEnd(){
