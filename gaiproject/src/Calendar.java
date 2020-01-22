@@ -17,24 +17,16 @@ class Calendar {
 	protected int numberDays = 5;
 	protected int numberSlotPerDay = 24;
 
-	public Calendar(boolean rand){
+	public Calendar(){
 		this.calendarTable = new Slot[this.numberDays][this.numberSlotPerDay];
-		if(rand){
-			randomlyInitCalendarTable();
-		}else{
-			initCalendarTable();	
-		}
+		initCalendarTable();	
 	}
 
-	public Calendar(int numberDays, int numberSlotPerDay, boolean rand){
+	public Calendar(int numberDays, int numberSlotPerDay){
 		this.numberDays = numberDays;
 		this.numberSlotPerDay = numberSlotPerDay;
 		this.calendarTable = new Slot[numberDays][numberSlotPerDay];	
-		if(rand){
-			randomlyInitCalendarTable();
-		}else{
-			initCalendarTable();	
-		}
+		initCalendarTable();
 	}
 
 
@@ -49,20 +41,47 @@ class Calendar {
 		}
 	}
 
-	private void randomlyInitCalendarTable(){
-		Double treshold = 0.25;
+	/**
+	 * Initialize a calendar with random values
+	 * @param lockTreshhold		double
+	 * @param wantedTreshhold	double
+	 * */
+	public void randomlyInitCalendar(double lockTreshhold, double wantedTreshhold){	
 		double x, wanted;
 		Slot s;
 		for (int day=0; day<this.numberDays; day++){
 			for (int time=0; time<this.numberSlotPerDay; time++){
-				x = Math.random();
-				wanted = Math.random();
-				if (x < treshold){
+				x = Math.random();	
+				wanted = Math.random() * (1.0 - wantedTreshhold) + wantedTreshhold;
+				if (x < lockTreshhold){
 					s = new Slot(day, time, wanted, true);
 				}else{
 					s = new Slot(day, time, wanted, false);
 				}
 				this.calendarTable[day][time] = s;
+			}
+		}
+	}
+
+	/**
+	 * Initialize a calendar with random values
+	 * @param c	Calendar
+	 * @param lockTreshhold		double
+	 * @param wantedTreshhold	double
+	 * */
+	public static void randomlyInitCalendar(Calendar c, double lockTreshhold, double wantedTreshhold){
+		double x, wanted;
+		Slot s;
+		for (int day=0; day<c.numberDays; day++){
+			for (int time=0; time<c.numberSlotPerDay; time++){
+				wanted = Math.random() * (+1.0 - wantedTreshhold) + wantedTreshhold;
+				x = Math.random();
+				if (x < lockTreshhold){
+					s = new Slot(day, time, wanted, true);
+				}else{
+					s = new Slot(day, time, wanted, false);
+				}
+				c.calendarTable[day][time] = s;
 			}
 		}
 	}

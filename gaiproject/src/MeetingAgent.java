@@ -45,6 +45,9 @@ public class MeetingAgent extends Agent{
 	static final double EXPECTATION_BASIC_VALUE = 1.0;
 	static final double EXPECTATION_DECREASE_RATE = 0.1;
 	static final int MAX_TRIALS_RAGEQUIT = 5;
+	// Min values
+	static final double WANTED_RAND_TRESHHOLD = 0;
+	static final double LOCK_RAND_TRESHHOLD = 0.20;
 
 	private Calendar myCalendar;
 	private AID[] contacts;
@@ -76,8 +79,16 @@ public class MeetingAgent extends Agent{
 	private HashMap<String, Integer> invitCanceled = new HashMap<String, Integer>();
 
 	protected void setup(){
+		double wanted=WANTED_RAND_TRESHHOLD, lock=LOCK_RAND_TRESHHOLD;
+		// Receive Arguments
+		Object[] args = getArguments();
+		if(args!=null && args.length > 1){
+			wanted = Double.parseDouble(args[0].toString());
+			lock = Double.parseDouble(args[1].toString());
+		}
 		// Init calendar randomly to have already planned meeting
-		myCalendar = new Calendar(true);
+		myCalendar = new Calendar();
+		Calendar.randomlyInitCalendar(myCalendar, lock, wanted);
 		myCalendar.prettyPrint();
 		gui = new MeetingAgentGui(this);
 		agentName = getAID().getLocalName();
