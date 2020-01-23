@@ -9,7 +9,7 @@ import gaiproject.Slot;
 /**
  * @author Maxime Dhaisne
  * @author Quentin Lanusse
- *
+ * Represent a Calendar
  */
 class Calendar {
 

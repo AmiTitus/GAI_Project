@@ -352,6 +352,11 @@ public class MeetingAgent extends Agent{
 		
 	}
 
+
+	/**
+	 * Compute wanted value of agent for this ID
+	 * @return double
+	 * */
 	public double getWanted(){
 		double wanted = EXPECTATION_BASIC_VALUE - invitCycle.get(currentId)*EXPECTATION_DECREASE_RATE;
 		return wanted;

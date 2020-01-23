@@ -9,7 +9,7 @@ import java.io.Serializable;
 /**
  * @author Maxime Dhaisne
  * @author Quentin Lanusse
- *
+ * Represent the content of an invitation
  */
 public class MessageContent implements Serializable{
 	
@@ -39,10 +39,19 @@ public class MessageContent implements Serializable{
 		this.invit = inv;
 	}
 
+
+	/**
+	 * Getter for invitation
+	 * @return HashMap<String, Integer>
+	 * */
 	public HashMap<String, Integer> getInvit(){
 		return this.invit;
 	}
 
+	/**
+	 * Getter for list of avaible slots
+	 * @return ArrayList<Slot>
+	 * */
 	public ArrayList<Slot> getAvailableSlots(){
 		return this.availableSlots;
 	}
